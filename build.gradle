@@ -1,0 +1,183 @@
+plugins {
+    id 'org.springframework.boot' version '2.7.2'
+    id 'io.spring.dependency-management' version '1.0.12.RELEASE'
+    id 'java'
+    id "signing"
+    id "maven-publish"
+    id "io.github.gradle-nexus.publish-plugin" version "1.0.0"
+}
+
+group = 'io.github.kalextaday'
+archivesBaseName = "LibreriaFechaApplication"
+version = '0.0.1'
+sourceCompatibility = '1.8'
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components.java)
+        }
+    }
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+def hasSigningKey = project.hasProperty("signingKeyId") || project.hasProperty("signingKey")
+if(hasSigningKey) {
+    sign(project)
+}
+
+void sign(Project project) {
+    project.signing {
+        required { project.gradle.taskGraph.hasTask("publish") }
+        def signingKeyId = project.findProperty("signingKeyId")
+        def signingKey = project.findProperty("signingKey")
+        def signingPassword = project.findProperty("signingPassword")
+        if (signingKeyId) {
+            useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+        } else if (signingKey) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
+        sign publishing.publications.maven
+    }
+}
+
+project.plugins.withType(MavenPublishPlugin).all {
+    PublishingExtension publishing = project.extensions.getByType(PublishingExtension)
+    publishing.publications.withType(MavenPublication).all { mavenPublication ->
+        mavenPublication.pom {
+            name = "${project.group}:${project.name}"
+            description = name
+            url = "https://github.com/rwinch/gradle-publish-ossrh-sample"
+            licenses {
+                license {
+                    name = "The Apache License, Version 2.0"
+                    url = "https://www.apache.org/licenses/LICENSE-2.0"
+                }
+            }
+            developers {
+                developer {
+                    id = "kalextaday"
+                    name = "Kevin Taday"
+                    email = "kalexander031098@outlook.com"
+                }
+            }
+            scm {
+                connection = "scm:git:https://github.com/kalextaday/jtime"
+                developerConnection = "scm:git:ssh://github.com/kalextaday/jtime.git"
+                url = "https://github.com/kalextaday/jtime"
+            }
+        }
+    }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype()
+
+        // OR, if you registered with Sonatype after 24 February 2021
+        // sonatype {
+        //	    nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+        //	    snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+        // }
+    }
+
+    // these are not strictly required. The default timeouts are set to 1 minute. But Sonatype can be really slow.
+    // If you get the error "java.net.SocketTimeoutException: timeout", these lines will help.
+    connectTimeout = Duration.ofMinutes(3)
+    clientTimeout = Duration.ofMinutes(3)
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "local"
+            // change URLs to point to your repos, e.g. http://my.org/repo
+            def releasesRepoUrl = "$buildDir/repos/releases"
+            def snapshotsRepoUrl = "$buildDir/repos/snapshots"
+            url = version.endsWith("SNAPSHOT") ? snapshotsRepoUrl : releasesRepoUrl
+        }
+    }
+}
+
+
+/*
+
+publishing {
+    repositories {
+        maven {
+            def releaseRepo = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshotRepo = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            url = isReleaseVersion ? releaseRepo : snapshotRepo
+            credentials {
+                username = project.hasProperty('ossrhUsername') ? ossrhUsername : "Unknown user"
+                password = project.hasProperty('ossrhPassword') ? ossrhPassword : "Unknown password"
+            }
+        }
+    }
+
+    publications {
+        mavenJava(MavenPublication) {
+            pom {
+                groupId = 'io.github.kalextaday'
+                name = 'JTime'
+                description = 'Library Date and Time Java'
+                url = 'https://github.com/kalextaday/jtime'
+                from components.java
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git@github.com:kalextaday/jtime.git'
+                    developerConnection = 'scm:git:git@github.com:kalextaday/jtime.git'
+                    url = 'https://github.com/kalextaday/jtime'
+                }
+            }
+        }
+    }
+}*/
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    compileOnly 'org.projectlombok:lombok'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+
+    implementation 'org.junit.jupiter:junit-jupiter:5.9.0-M1'
+}
+
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+/*artifacts {
+    archives javadocJar, sourcesJar
+}
+
+signing {
+    sign publishing.publications.mavenJava
+}
+
+tasks.withType(Sign) {
+    onlyIf { isReleaseVersion }
+}*/
+

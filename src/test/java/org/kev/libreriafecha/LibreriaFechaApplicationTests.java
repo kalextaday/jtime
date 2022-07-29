@@ -1,0 +1,13 @@
+package org.kev.libreriafecha;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class LibreriaFechaApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}
