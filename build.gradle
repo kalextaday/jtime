@@ -4,7 +4,7 @@ plugins {
     id 'java'
     id "signing"
     id "maven-publish"
-    id "io.github.gradle-nexus.publish-plugin" version "1.0.0"
+    id "io.github.gradle-nexus.publish-plugin" version "1.1.0"
 }
 
 group = 'io.github.kalextaday'
@@ -74,7 +74,7 @@ project.plugins.withType(MavenPublishPlugin).all {
     }
 }
 
-nexusPublishing {
+/*nexusPublishing {
     repositories {
         //sonatype()
 
@@ -89,9 +89,70 @@ nexusPublishing {
     // If you get the error "java.net.SocketTimeoutException: timeout", these lines will help.
     connectTimeout = Duration.ofMinutes(3)
     clientTimeout = Duration.ofMinutes(3)
+}*/
+
+nexusPublishing {
+    repositories {
+        sonatype {  //only for users registered in Sonatype after 24 Feb 2021
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+        }
+    }
 }
 
 publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from(components.java)
+            pom {
+                name = 'publish-java'
+                description = 'Demo of how to publish a Java Gradle based project to Maven Central'
+                url = 'https://github.com/kalextaday/jtime'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'kalextaday'
+                        name = 'Kevin Taday'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/kalextaday/jtime'
+                    connection = 'scm:git://github.com/kalextaday/jtime.git'
+                    developerConnection = 'scm:git://github.com/kalextaday/jtime.git'
+                }
+            }
+        }
+    }
+}
+
+
+signing {
+    sign publishing.publications.mavenJava
+}
+
+
+ext.genOutputDir = file("$buildDir/generated-resources")
+
+task generateVersionTxt()  {
+    ext.outputFile = file("$genOutputDir/version.txt")
+    outputs.file(outputFile)
+    doLast {
+        outputFile.text = """GroupId: ${project.group}
+Name: ${project.name}
+Version: $version
+Build-time: ${java.time.LocalDateTime.now()}
+"""
+    }
+}
+
+sourceSets.main.output.dir genOutputDir, builtBy: generateVersionTxt
+
+/*publishing {
     repositories {
         maven {
             name = "local"
@@ -101,7 +162,7 @@ publishing {
             url = version.endsWith("SNAPSHOT") ? snapshotsRepoUrl : releasesRepoUrl
         }
     }
-}
+}*/
 
 
 /*
